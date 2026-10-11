@@ -1,0 +1,14 @@
+.git
+.github
+.env
+.env.*
+!.env.example
+
+*.log
+*.pid
+
+.DS_Store
+.idea
+.vscode
+
+README.md

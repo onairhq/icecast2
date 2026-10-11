@@ -1,0 +1,65 @@
+<?xml version="1.0" ?>
+<icecast>
+    <location>${ICECAST_LOCATION}</location>
+    <admin>${ICECAST_ADMIN_EMAIL}</admin>
+    <hostname>${ICECAST_HOSTNAME}</hostname>
+
+    <limits>
+        <clients>${ICECAST_MAX_CLIENTS}</clients>
+        <sources>${ICECAST_MAX_SOURCES}</sources>
+        <queue-size>524288</queue-size>
+        <client-timeout>30</client-timeout>
+        <header-timeout>15</header-timeout>
+        <source-timeout>10</source-timeout>
+        <burst-on-connect>1</burst-on-connect>
+        <burst-size>65535</burst-size>
+    </limits>
+
+    <authentication>
+        <source-password>${ICECAST_SOURCE_PASSWORD}</source-password>
+        <relay-password>${ICECAST_RELAY_PASSWORD}</relay-password>
+        <admin-user>${ICECAST_ADMIN_USER}</admin-user>
+        <admin-password>${ICECAST_ADMIN_PASSWORD}</admin-password>
+    </authentication>
+
+    <listen-socket>
+        <port>${ICECAST_PORT}</port>
+    </listen-socket>
+
+    <http-headers>
+        <header name="Access-Control-Allow-Origin" value="*" />
+        <header
+            name="Access-Control-Allow-Headers"
+            value="Origin, Accept, X-Requested-With, Content-Type, Icy-MetaData"
+        />
+        <header
+            name="Access-Control-Allow-Methods"
+            value="GET, OPTIONS, HEAD"
+        />
+        <header
+            name="Access-Control-Expose-Headers"
+            value="Icy-MetaInt, Icy-Br, Icy-Description, Icy-Genre, Icy-Name, Icy-Pub, Icy-Url"
+        />
+    </http-headers>
+
+    <fileserve>1</fileserve>
+
+    <paths>
+        <basedir>/usr/share/icecast</basedir>
+        <logdir>/var/log/icecast</logdir>
+        <webroot>/usr/share/icecast/web</webroot>
+        <adminroot>/usr/share/icecast/admin</adminroot>
+        <pidfile>/var/lib/icecast/icecast.pid</pidfile>
+    </paths>
+
+    <logging>
+        <accesslog>-</accesslog>
+        <errorlog>-</errorlog>
+        <playlistlog>-</playlistlog>
+        <loglevel>3</loglevel>
+    </logging>
+
+    <security>
+        <chroot>0</chroot>
+    </security>
+</icecast>
