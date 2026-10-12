@@ -2,6 +2,11 @@
 
 A multi-platform Docker image for [Icecast](https://icecast.org/), built directly from the upstream source code.
 
+## Documentations
+
+[onairhq/liquidsoap](https://github.com/onairhq/liquidsoap)
+[onairhq/web](https://github.com/onairhq/web)
+
 ## Supported Platforms
 
 | OS    | Architecture |
@@ -90,11 +95,9 @@ The version tag identifies the upstream Icecast version, not an immutable Docker
 
 For reproducible deployments, pin the image by digest when an immutable image reference is required.
 
-## Version
+## Acknowledgements
 
-The Icecast version is configurable at build time through the `ICECAST_VERSION` build argument.
-
-The image is built from upstream Icecast source code and includes the required runtime dependencies.
+This project was inspired by [libretime/icecast-docker](https://github.com/libretime/icecast-docker)
 
 <div align=center>
     <p>Built with passion for open-source streaming</p>
