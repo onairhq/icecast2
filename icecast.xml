@@ -1,4 +1,4 @@
-<?xml version="1.0" ?>
+<?xml version="1.0" encoding="UTF-8" ?>
 <icecast>
     <location>${ICECAST_LOCATION}</location>
     <admin>${ICECAST_ADMIN_EMAIL}</admin>
@@ -11,7 +11,6 @@
         <client-timeout>30</client-timeout>
         <header-timeout>15</header-timeout>
         <source-timeout>10</source-timeout>
-        <burst-on-connect>1</burst-on-connect>
         <burst-size>65535</burst-size>
     </limits>
 
@@ -27,16 +26,14 @@
     </listen-socket>
 
     <http-headers>
-        <header name="Access-Control-Allow-Origin" value="*" />
+        <header type="cors" name="Access-Control-Allow-Origin" value="*" />
         <header
+            type="cors"
             name="Access-Control-Allow-Headers"
-            value="Origin, Accept, X-Requested-With, Content-Type, Icy-MetaData"
+            value="Origin, Accept, X-Requested-With, Content-Type, Icy-MetaData, Range"
         />
         <header
-            name="Access-Control-Allow-Methods"
-            value="GET, OPTIONS, HEAD"
-        />
-        <header
+            type="cors"
             name="Access-Control-Expose-Headers"
             value="Icy-MetaInt, Icy-Br, Icy-Description, Icy-Genre, Icy-Name, Icy-Pub, Icy-Url"
         />
@@ -50,6 +47,8 @@
         <webroot>/usr/share/icecast/web</webroot>
         <adminroot>/usr/share/icecast/admin</adminroot>
         <pidfile>/var/lib/icecast/icecast.pid</pidfile>
+
+        <alias source="/" destination="/status.xsl" />
     </paths>
 
     <logging>

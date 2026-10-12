@@ -1,100 +1,82 @@
 # syntax=docker/dockerfile:1
 
-# ============================================================
+ARG ALPINE_VERSION=3.23
+
+# ------------------------------------------------------------
 # Build stage
-# ============================================================
-FROM alpine:3.23 AS builder
+# ------------------------------------------------------------
+FROM alpine:${ALPINE_VERSION} AS builder
 
 ARG ICECAST_VERSION=2.5.0
 ARG LIBIGLOO_VERSION=0.9.5
 
-RUN set -eux; \
-    test -n "${ICECAST_VERSION}"; \
-    apk add --no-cache \
+ENV PREFIX=/usr
+ENV PKG_CONFIG_PATH=/usr/lib/pkgconfig:/usr/lib64/pkgconfig
+
+RUN apk add --no-cache \
+    build-base \
     autoconf \
     automake \
-    build-base \
+    libtool \
+    pkgconf \
+    linux-headers \
     curl \
+    tar \
+    bzip2 \
+    ca-certificates \
     curl-dev \
     libogg-dev \
     libtheora-dev \
-    libtool \
     libvorbis-dev \
     libxml2-dev \
     libxslt-dev \
     openssl-dev \
-    pkgconf \
     rhash-dev \
     speex-dev
 
-# ------------------------------------------------------------
-# Build libigloo
-# ------------------------------------------------------------
-WORKDIR /tmp
+WORKDIR /build
 
+# Download and compile libigloo.
 RUN set -eux; \
     curl -fsSL \
     "https://downloads.xiph.org/releases/igloo/libigloo-${LIBIGLOO_VERSION}.tar.gz" \
     -o libigloo.tar.gz; \
-    tar -xzf libigloo.tar.gz; \
-    rm libigloo.tar.gz; \
-    cd "/tmp/libigloo-${LIBIGLOO_VERSION}"; \
-    ./configure \
-    --prefix=/usr \
-    --disable-static; \
-    make -j"$(nproc)"; \
-    make DESTDIR=/tmp/rootfs install
+    mkdir libigloo-src; \
+    tar -xzf libigloo.tar.gz \
+    --strip-components=1 -C libigloo-src; \
+    cd libigloo-src; \
+    ./configure --prefix=/usr; \
+    make -j"$(getconf _NPROCESSORS_ONLN)"; \
+    make install
 
-# ------------------------------------------------------------
-# Download Icecast
-# ------------------------------------------------------------
-WORKDIR /tmp
-
+# Download and compile Icecast.
 RUN set -eux; \
     curl -fsSL \
     "https://downloads.xiph.org/releases/icecast/icecast-${ICECAST_VERSION}.tar.gz" \
     -o icecast.tar.gz; \
-    tar -xzf icecast.tar.gz; \
-    rm icecast.tar.gz
-
-# ------------------------------------------------------------
-# Build Icecast
-# ------------------------------------------------------------
-WORKDIR /tmp/icecast-${ICECAST_VERSION}
-
-RUN set -eux; \
-    export PKG_CONFIG_PATH="/tmp/rootfs/usr/lib/pkgconfig:/tmp/rootfs/usr/share/pkgconfig"; \
-    export CPPFLAGS="-I/tmp/rootfs/usr/include"; \
-    export LDFLAGS="-L/tmp/rootfs/usr/lib"; \
+    mkdir icecast-src; \
+    tar -xzf icecast.tar.gz \
+    --strip-components=1 -C icecast-src; \
+    cd icecast-src; \
+    PKG_CONFIG_PATH="/usr/lib/pkgconfig:/usr/lib64/pkgconfig" \
     ./configure \
     --prefix=/usr \
     --sysconfdir=/etc \
-    --localstatedir=/var \
-    --disable-static; \
-    make -j"$(nproc)"; \
-    make DESTDIR=/tmp/rootfs install
+    --localstatedir=/var; \
+    make -j"$(getconf _NPROCESSORS_ONLN)"; \
+    make install
 
-# ============================================================
+# ------------------------------------------------------------
 # Runtime stage
-# ============================================================
-FROM alpine:3.23
+# ------------------------------------------------------------
+FROM alpine:${ALPINE_VERSION} AS runtime
 
-ARG ICECAST_VERSION=2.5.0
+ENV PATH="/usr/bin:/usr/sbin:/bin:/sbin"
+ENV LD_LIBRARY_PATH="/usr/lib"
 
-ENV ICECAST_VERSION="${ICECAST_VERSION}"
-
-LABEL org.opencontainers.image.title="Icecast2" \
-    org.opencontainers.image.description="Icecast2 streaming media server" \
-    org.opencontainers.image.version="${ICECAST_VERSION}" \
-    org.opencontainers.image.source="https://github.com/onairhq/icecast2"
-
-# ============================================================
-# Runtime dependencies
-# ============================================================
 RUN apk add --no-cache \
-    bash \
     ca-certificates \
-    libcurl \
+    curl \
     libogg \
     libtheora \
     libvorbis \
@@ -102,63 +84,50 @@ RUN apk add --no-cache \
     libxslt \
     openssl \
     rhash-libs \
-    speex
+    speex \
+    libgcc \
+    libstdc++
 
-# ============================================================
-# Install Icecast and libigloo
-# ============================================================
-COPY --from=builder /tmp/rootfs/ /
-
-# ============================================================
-# Redirect logs to stdout/stderr
-# ============================================================
-RUN set -eux; \
-    mkdir -p /var/log/icecast; \
-    ln -sf /dev/stdout /var/log/icecast/access.log; \
-    ln -sf /dev/stderr /var/log/icecast/error.log
-
-# ============================================================
-# User and runtime directories
-# ============================================================
-RUN set -eux; \
-    addgroup -S -g 10001 icecast; \
-    adduser -S -D -H \
+# Fixed non-root identity.
+RUN addgroup -S -g 10001 icecast \
+    && adduser -S -D -H \
     -u 10001 \
     -G icecast \
-    -h /var/lib/icecast \
     -s /sbin/nologin \
-    icecast; \
-    mkdir -p \
-    /var/lib/icecast \
-    /var/log/icecast \
-    /var/run/icecast; \
-    chown -R icecast:icecast \
-    /etc/icecast.xml \
-    /var/lib/icecast \
-    /var/log/icecast \
-    /var/run/icecast; \
-    chmod 0644 /etc/icecast.xml; \
-    chown icecast:icecast /etc; \
-    chmod 0755 /etc
+    icecast
 
-# ============================================================
-# Entrypoint
-# ============================================================
-COPY xml_editor.sh /usr/local/bin/xml_editor
+# Copy the compiled application and libigloo from the builder.
+COPY --from=builder /usr/bin/icecast /usr/bin/icecast
+COPY --from=builder /usr/lib/ /usr/lib/
+COPY --from=builder /usr/share/icecast/ /usr/share/icecast/
+
+# Original configuration remains protected.
+COPY --chown=root:icecast icecast.xml /etc/icecast.xml
+
+RUN chmod 0640 /etc/icecast.xml \
+    && mkdir -p \
+    /var/lib/icecast \
+    /var/log/icecast \
+    /var/run/icecast \
+    && chown -R icecast:icecast \
+    /var/lib/icecast \
+    /var/log/icecast \
+    /var/run/icecast \
+    && chmod 0750 \
+    /var/lib/icecast \
+    /var/log/icecast \
+    /var/run/icecast
+
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+COPY xml-edit.sh /usr/local/bin/xml-edit
 
 RUN chmod 0755 \
-    /usr/local/bin/xml_editor \
-    /usr/local/bin/docker-entrypoint.sh
-
-WORKDIR /var/lib/icecast
+    /usr/local/bin/docker-entrypoint.sh \
+    /usr/local/bin/xml-edit
 
 EXPOSE 8000
-
-STOPSIGNAL SIGTERM
 
 USER 10001:10001
 
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
-
-CMD ["icecast", "-c", "/etc/icecast.xml"]
+CMD ["icecast", "-c", "/var/lib/icecast/icecast.xml"]
