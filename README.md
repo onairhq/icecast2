@@ -4,8 +4,8 @@ A multi-platform Docker image for [Icecast](https://icecast.org/), built directl
 
 ## Documentations
 
-[onairhq/liquidsoap](https://github.com/onairhq/liquidsoap)
-[onairhq/web](https://github.com/onairhq/web)
+- [onairhq/liquidsoap](https://github.com/onairhq/liquidsoap)
+- [onairhq/web](https://github.com/onairhq/web)
 
 ## Supported Platforms
 
